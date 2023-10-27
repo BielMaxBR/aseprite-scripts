@@ -12,6 +12,32 @@ end
 function deg2rad(deg)
     return deg * (math.pi/180)
 end
+function rotateVector3D(vector, angles) 
+  -- Converter ângulos para radianos
+  local radX = deg2rad(angles.x)
+  local radY = deg2rad(angles.y)
+  local radZ = deg2rad(angles.z)
+
+  -- Rotação em torno do eixo X
+  local rotatedX = vector.x
+  local rotatedY = vector.y * math.cos(radX) - vector.z * math.sin(radX)
+  local rotatedZ = vector.z * math.sin(radX) + vector.z * math.cos(radX)
+
+  -- Rotação em torno do eixo Y
+  local tempX = rotatedX * math.cos(radY) + rotatedZ * math.sin(radY)
+  local tempY = rotatedY
+  local tempZ = -rotatedX * math.sin(radY) + rotatedZ * math.cos(radY)
+
+  -- Rotação em torno do eixo Z
+  local finalX = tempX * math.cos(radZ) - tempY * math.sin(radZ)
+  local finalY = tempX * math.sin(radZ) + tempY * math.cos(radZ)
+  local finalZ = tempZ
+
+  -- Vetor rotacionado
+  local rotatedVector = {["x"]=finalX, ["y"]=finalY, ["z"]=finalZ}
+
+  return rotatedVector
+end
 
 function userInput()
     local dlg = Dialog()
@@ -27,7 +53,7 @@ function userInput()
 end
 
 local points = {}
-local rotation = {x=45,y=0,z=0}
+local rotation = {x=90,y=0,z=0}
 
 -- Draws the specified circle
 function drawSpiral(cx, cy, maxrad, stepradius)
@@ -78,14 +104,12 @@ function drawSpiral(cx, cy, maxrad, stepradius)
     end
 
     for k, point in pairs(points) do
-        rx = point.x + point.y * math.sin(deg2rad(rotation.y)) - point.z * math.cos(deg2rad(rotation.z))
-        ry = point.y + point.x * math.sin(deg2rad(rotation.x)) - point.z * math.cos(deg2rad(rotation.z))
-        rz = point.z + point.x * math.sin(deg2rad(rotation.x)) - point.x * math.cos(deg2rad(rotation.x))
+        local rotated = rotateVector3D(point, rotation)
 
         perspective = cx * 1 -- valores cx e cy são do centro da tela
-        scale = (perspective / (perspective + point.z))
-        px = (rx - cx) * scale
-        py = (rx - cy) * scale
+        scale = (perspective / (perspective + rotated.z))
+        px = (rotated.x - cx) * scale
+        py = (rotated.y - cy) * scale
         -- px = rx / rz
         -- py = ry / rz
         copy:drawPixel(px + cx, py + cy, app.fgColor)
