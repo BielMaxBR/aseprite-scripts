@@ -9,6 +9,10 @@ function hashCoordinates(x, y, z)
     return index
 end
 
+function deg2rad(deg)
+    return deg * (math.pi/180)
+end
+
 function userInput()
     local dlg = Dialog()
     -- Create dialog parameters
@@ -23,6 +27,7 @@ function userInput()
 end
 
 local points = {}
+local rotation = {x=45,y=0,z=0}
 
 -- Draws the specified circle
 function drawSpiral(cx, cy, maxrad, stepradius)
@@ -73,7 +78,17 @@ function drawSpiral(cx, cy, maxrad, stepradius)
     end
 
     for k, point in pairs(points) do
-        -- px =  
+        rx = point.x + point.y * math.sin(deg2rad(rotation.y)) - point.z * math.cos(deg2rad(rotation.z))
+        ry = point.y + point.x * math.sin(deg2rad(rotation.x)) - point.z * math.cos(deg2rad(rotation.z))
+        rz = point.z + point.x * math.sin(deg2rad(rotation.x)) - point.x * math.cos(deg2rad(rotation.x))
+
+        perspective = cx * 1 -- valores cx e cy são do centro da tela
+        scale = (perspective / (perspective + point.z))
+        px = (rx - cx) * scale
+        py = (rx - cy) * scale
+        -- px = rx / rz
+        -- py = ry / rz
+        copy:drawPixel(px + cx, py + cy, app.fgColor)
     end
 
     app.activeCel.image:drawImage(copy)
