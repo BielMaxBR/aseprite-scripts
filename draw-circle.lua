@@ -3,7 +3,7 @@
 -- https://github.com/aquova/aseprite-scripts
 
 -- esse eu não fiz mas recomendo
--- Open dialog, ask user for paramters
+-- Open dialog, ask user for parameters
 function userInput()
     local dlg = Dialog()
     -- Create dialog parameters

@@ -1,5 +1,14 @@
 -- baseado no script de circulo
 -- Open dialog, ask user for paramters
+function hashCoordinates(x, y, z)
+    local prime1 = 73856093
+    local prime2 = 19349663
+    local prime3 = 83492791
+    local index = (x * prime1) + (y * prime2) + (z * prime3)
+    index = math.floor(index)
+    return index
+end
+
 function userInput()
     local dlg = Dialog()
     -- Create dialog parameters
@@ -12,6 +21,8 @@ function userInput()
 
     return dlg.data
 end
+
+local points = {}
 
 -- Draws the specified circle
 function drawSpiral(cx, cy, maxrad, stepradius)
@@ -48,9 +59,23 @@ function drawSpiral(cx, cy, maxrad, stepradius)
         distSquared = dx + dy
         radSquared = maxrad^2
 
-        copy:drawPixel(math.floor(x), math.floor(y), app.fgColor)
-        Climit = Climit + 1 
+        z = Cradius
+        fx = math.floor(x)
+        fy = math.floor(y)
+        fz = math.floor(z)
+        index = hashCoordinates(fx, fy, fz)
+
+        if (not points[index]) then
+            points[index] = { ["x"]=fx, ["y"]=fy, ["z"]=fz }
+            -- copy:drawPixel(fx, fy, app.fgColor)
+        end
+        Climit = Climit + 1
     end
+
+    for k, point in pairs(points) do
+        -- px =  
+    end
+
     app.activeCel.image:drawImage(copy)
 end
 
