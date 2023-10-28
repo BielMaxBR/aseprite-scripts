@@ -12,16 +12,20 @@ end
 function deg2rad(deg)
     return deg * (math.pi/180)
 end
-function rotateVector3D(vector, angles) 
+function rotateVector3D(vector, origin, angles) 
   -- Converter ângulos para radianos
   local radX = deg2rad(angles.x)
   local radY = deg2rad(angles.y)
   local radZ = deg2rad(angles.z)
+  
+  local X = vector.x - origin.x
+  local Y = vector.y - origin.y
+  local Z = vector.z - origin.z
 
   -- Rotação em torno do eixo X
-  local rotatedX = vector.x
-  local rotatedY = vector.y * math.cos(radX) - vector.z * math.sin(radX)
-  local rotatedZ = vector.z * math.sin(radX) + vector.z * math.cos(radX)
+  local rotatedX = X
+  local rotatedY = Y * math.cos(radX) - Z * math.sin(radX)
+  local rotatedZ = Z * math.sin(radX) + Z * math.cos(radX)
 
   -- Rotação em torno do eixo Y
   local tempX = rotatedX * math.cos(radY) + rotatedZ * math.sin(radY)
@@ -34,7 +38,7 @@ function rotateVector3D(vector, angles)
   local finalZ = tempZ
 
   -- Vetor rotacionado
-  local rotatedVector = {["x"]=finalX, ["y"]=finalY, ["z"]=finalZ}
+  local rotatedVector = newVector(finalX + origin.x, finalY + origin.y, finalZ + origin.z)
 
   return rotatedVector
 end
@@ -52,21 +56,17 @@ function userInput()
     return dlg.data
 end
 
-local points = {}
-local rotation = {x=90,y=0,z=0}
+function newVector(x,y,z) 
+    return { ["x"]=x, ["y"]=y, ["z"]=z }
+end
 
--- Draws the specified circle
-function drawSpiral(cx, cy, maxrad, stepradius)
-    local image = app.activeCel.image
-    local copy = image:clone()
-
-    cx = copy.width / 2
-    cy = copy.height / 2
-
-    local x = cx
-    local y = cy
-    local dx = cx - x
-    local dy = cy - y
+-- create the specified spiral
+function createSpiral(origin, maxrad, stepradius)
+    local points = {}
+    local x = origin.x
+    local y = origin.y
+    local dx = origin.x - x
+    local dy = origin.y - y
     dx = dx^2
     dy = dy^2
     local distSquared = dx + dy
@@ -77,42 +77,63 @@ function drawSpiral(cx, cy, maxrad, stepradius)
     limit = 150000
     Climit = 0
     while ( distSquared <= radSquared and Climit < limit ) do 
-    -- while ( Cangle < 0.5 ) do 
-        Cradius = Cradius + stepradius--- math.sqrt(Cradius)
+        Cradius = Cradius + stepradius
         stepradius = stepradius + 0.00002
-        Cangle = Cangle + 0.01--stepradius --(stepradius - 1/math.sqrt(Cradius))
-        x = cx + math.cos(Cangle) * Cradius
-        y = cy + math.sin(Cangle) * Cradius
-        dx = cx - x
-        dy = cy - y
+        Cangle = Cangle + 0.01
+
+        x = origin.x + math.cos(Cangle) * Cradius
+        y = origin.y + math.sin(Cangle) * Cradius
+
+        dx = origin.x - x
+        dy = origin.y - y
         dx = dx^2
         dy = dy^2
+
         distSquared = dx + dy
         radSquared = maxrad^2
 
-        z = Cradius
-        fx = math.floor(x)
-        fy = math.floor(y)
-        fz = math.floor(z)
-        index = hashCoordinates(fx, fy, fz)
+        z = Cradius -- posso mudar pra outra coisa
+        index = hashCoordinates(x, y, z)
 
         if (not points[index]) then
-            points[index] = { ["x"]=fx, ["y"]=fy, ["z"]=fz }
+            points[index] = newVector(x,y,z)
             -- copy:drawPixel(fx, fy, app.fgColor)
         end
         Climit = Climit + 1
     end
+    return points
+end
 
+function rotatePoints(points, origin, rotation)
+
+    local newPoints = {}
     for k, point in pairs(points) do
-        local rotated = rotateVector3D(point, rotation)
+        local rotated = rotateVector3D(point, origin, rotation)
+        newPoints[k] = rotated
+    end
+    return newPoints
+end
 
-        perspective = cx * 1 -- valores cx e cy são do centro da tela
-        scale = (perspective / (perspective + rotated.z))
-        px = (rotated.x - cx) * scale
-        py = (rotated.y - cy) * scale
+function drawSpiral(points, origin)
+    local image = app.activeCel.image
+    local copy = image:clone()
+    
+    for k, point in pairs(points) do
+        x = point.x
+        y = point.y
+        z = point.z
+        
+        perspective = 128 * 0.8 -- valores origin.x e origin.y são do centro da tela
+        scale = (perspective / (perspective + z))
+        px = (x - origin.x) * scale + origin.x
+        py = (y - origin.y) * scale + origin.y
         -- px = rx / rz
         -- py = ry / rz
-        copy:drawPixel(px + cx, py + cy, app.fgColor)
+        color = app.fgColor
+        color.red = math.max(color.red - 1/z)
+        color.green = math.max(color.green - 1/z)
+        color.blue = math.max(color.blue - 1/z)
+        copy:drawPixel(px, py, color)
     end
 
     app.activeCel.image:drawImage(copy)
@@ -121,7 +142,12 @@ end
 -- Run script
 do
     local userCircle = userInput()
-    drawSpiral(16, 16, 128, 0.0001)
+    local origin = newVector(64,64,0)
+
+    points = createSpiral(origin, 64, 1/200) -- valor padrão do arg 3 = 0.0001
+    points = rotatePoints(points, origin, newVector(-55,0,15))
+    drawSpiral(points, origin)
+
     if userCircle.ok then
         -- drawSpiral(userCircle.x, userCircle.y, userCircle.radius, 0.5)
     end
