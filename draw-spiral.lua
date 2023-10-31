@@ -15,6 +15,13 @@ end
 function deg2rad(deg)
     return deg * (math.pi / 180)
 end
+function rad2deg(rad)
+    return rad * (180 / math.pi)
+end
+
+function newVector(x,y,z) 
+    return { ["x"]=x, ["y"]=y, ["z"]=z }
+end
 
 function rotateVector3D(vector, origin, angles)
     -- Converter ângulos para radianos
@@ -80,7 +87,7 @@ end
 
 
 -- create the specified spiral
-function createSpiral(maxrad, stepradius)
+function createSpiral(maxrad, loops)
     local points = {}
     local x = 0
     local y = 0
@@ -88,16 +95,23 @@ function createSpiral(maxrad, stepradius)
     local dy = y ^ 2
     local distSquared = dx + dy
     local radSquared = maxrad ^ 2
+    local stepradius = 1 / (radSquared) -- fixo
     local Cradius = stepradius
 
     local Cangle = 0
     limit = 150000
     Climit = 0
+
+    counter = 0
     while (distSquared <= radSquared and Climit < limit) do
         Cradius = Cradius + stepradius
-        stepradius = stepradius + 0.00002
-        Cangle = Cangle + 0.01
-
+        -- stepradius = stepradius * (1 + 1 / (maxrad * loops))
+        stepradius = stepradius + (math.pi/200)/(maxrad/2)--( 1/radSquared / loops*(maxrad/loops))
+        Cangle = Cangle + math.pi*0.02 -- fixo
+        if (math.floor((Cangle % (math.pi*2))*100) == 0) then -- testes, ignora
+            counter = counter + 1
+            print(counter)
+        end
         x = math.cos(Cangle) * Cradius
         y = math.sin(Cangle) * Cradius
         dx = x ^ 2
@@ -115,6 +129,7 @@ function createSpiral(maxrad, stepradius)
         end
         Climit = Climit + 1
     end
+    print(rad2deg(Cangle) % 360)
     return points
 end
 
@@ -132,16 +147,20 @@ function lerp(a, b, t)
     return a + (b - a) * 0.5 * t
 end
 
-function drawSpiral(points, origin)
+function drawSpiral(points, origin, hasPerspective)
     for k, point in pairs(points) do
         x = point.x
         y = point.y
         z = point.z + origin.z
 
-        perspective = 128 * 0.8 -- valores origin.x e origin.y são do centro da tela
-        scale = (perspective / (perspective + z))
-        px = x * scale
-        py = y * scale
+        local px = x
+        local py = y
+        if hasPerspective then
+            perspective = 128 * 0.8
+            scale = (perspective / (perspective + z))
+            px = x * scale
+            py = y * scale
+        end
 
         color = app.fgColor
         -- color.red = math.max((color.red * 1 / (z)), 0, color.red)
@@ -165,21 +184,25 @@ do
     local origin = newVector(64, 64, 0)
     local rotateOrigin = newVector(0, 0, 0)
 
-    for i = 2, 180 + 1 do
-        if app.activeSprite.frames[i] then
-            app.frame = i
-        else
-            app.activeSprite:newFrame(1)
-            app.activeFrame.duration = 0.02
-        end
-        copy = Image(image.width,image.height)
-        points = createSpiral(64, 1 / 200) -- valor padrão do arg 3 = 0.0001
-        points = rotatePoints(points, rotateOrigin, newVector(0, 0, i*20))
-        points = rotatePoints(points, rotateOrigin, newVector(i*2, 0, 0))
-        drawSpiral(points, origin)
+        copy = Image(image.width, image.height)
+        points = createSpiral(128, 20)
+        points = rotatePoints(points, rotateOrigin, newVector(0, 0, 0))
+        drawSpiral(points, origin, true)
+    -- for i = 2, 180 + 1 do
+    --     if app.activeSprite.frames[i] then
+    --         app.frame = i
+    --     else
+    --         app.activeSprite:newFrame(1)
+    --         app.activeFrame.duration = 0.02
+    --     end
+    --     copy = Image(image.width,image.height)
+    --     points = createSpiral(64, 1 / 200) -- valor padrão do arg 3 = 0.0001
+    --     points = rotatePoints(points, rotateOrigin, newVector(0, 0, i*20))
+    --     points = rotatePoints(points, rotateOrigin, newVector(i*2, 0, 0))
+    --     drawSpiral3D(points, origin)
         
-    end
-    app.activeSprite:deleteFrame(1)
+    -- end
+    -- app.activeSprite:deleteFrame(1)
 
     -- if userCircle.ok then
     --     -- drawSpiral(userCircle.x, userCircle.y, userCircle.radius, 0.5)
